@@ -1,31 +1,39 @@
-#include "idt.h"
-#include "config.h"
-#include "memory/memory.h"
-#include "kernel.h"
+/* src/idt/idt.c */
+#include <stdint.h>
+#include "idt/idt.h"
+#include "shell/shell.h"
 
-struct idt_desc idt_descriptors[RZOS_TOTAL_INTERRUPTS];
-struct idtr_desc idtr_descriptors;
+/* extern ASM stubs for specific ISRs (defined in isr.asm) */
+extern void isr14();
+extern void isr_common(void); /* if you use a common stub */
 
-extern void idt_load(void *ptr);
+/* IDT array and pointer */
+static struct idt_entry idt_entries[256];
+static struct idt_ptr   idt_ptr;
 
-void idt_zero(){
-	print("\nDivided by zero error\n");
+/* helper to set one gate */
+void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    idt_entries[num].base_lo  = (base & 0xFFFF);
+    idt_entries[num].base_hi  = (base >> 16) & 0xFFFF;
+    idt_entries[num].sel      = sel;
+    idt_entries[num].always0  = 0;
+    idt_entries[num].flags    = flags;
 }
 
-void idt_set(int interrupt_no,void *address){
-	struct idt_desc* desc=&idt_descriptors[interrupt_no];
-	desc->offset_1=(uint32_t) address&0x0000ffff;
-	desc->selector=KERNEL_CODE_SELECTOR;
-	desc->zero = 0x00;
-	desc->type_attr=0xEE;
-	desc->offset_2=(uint32_t) address>>16;
-}
+/* public: initialize IDT and load it */
+void idt_init(void) {
+    /* clear all entries */
+    for (int i = 0; i < 256; ++i) {
+        idt_set_gate(i, 0, 0x08, 0x00);
+    }
 
-void idt_init(){
-memset(idt_descriptors,0,sizeof(idt_descriptors));
-idtr_descriptors.limit=sizeof(idt_descriptors)-1;
-idtr_descriptors.base=(uint32_t) idt_descriptors;
-idt_set(0,idt_zero);
-//load the interrupt descriptor table
-idt_load(&idtr_descriptors);
+    /* Set the page fault gate (interrupt 14) to our stub */
+    idt_set_gate(14, (uint32_t)isr14, 0x08, 0x8E);
+
+    /* Fill idt_ptr and load */
+    idt_ptr.limit = (sizeof(struct idt_entry) * 256) - 1;
+    idt_ptr.base  = (uint32_t)&idt_entries;
+
+    /* lidt expects memory operand; use inline asm to load */
+    __asm__ volatile("lidtl (%0)" : : "r" (&idt_ptr));
 }

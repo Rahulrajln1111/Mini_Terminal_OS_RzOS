@@ -5,9 +5,13 @@ FILES = \
     ./build/shell.o \
     ./build/memory/memory.o \
     ./build/memory/page.o \
+    ./build/idt/idt.asm.o \
+    ./build/idt/idt.o \
+    ./build/idt/isr.asm.o \
+    ./build/idt/isr.o  \
+    ./build/utils.o
 
-
-INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory
+INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops \
         -fstrength-reduce -fomit-frame-pointer -finline-functions \
         -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter \
@@ -32,6 +36,10 @@ all: ./bin/kernel.bin ./bin/boot.bin
 ./build/kernel.o: ./src/kernel.c
 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/kernel.c -o ./build/kernel.o 
 
+./build/utils.o: ./src/utils.c
+	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/utils.c -o ./build/utils.o 
+
+
 ./build/io/io.asm.o: ./src/io/io.asm
 	nasm -f elf -g ./src/io/io.asm -o ./build/io/io.asm.o
 
@@ -49,6 +57,19 @@ all: ./bin/kernel.bin ./bin/boot.bin
 # -----------------------------
 ./bin/boot.bin: ./src/boot/boot.asm
 	nasm -f bin ./src/boot/boot.asm -o ./bin/boot.bin
+#######adding idt
+./build/idt/idt.asm.o: ./src/idt/idt.asm
+	nasm -f elf -g ./src/idt/idt.asm -o ./build/idt/idt.asm.o
+
+./build/idt/idt.o: ./src/idt/idt.c
+	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/idt/idt.c -o ./build/idt/idt.o
+##adding isr
+./build/idt/isr.asm.o: ./src/idt/isr.asm
+	nasm -f elf -g ./src/idt/isr.asm -o ./build/idt/isr.asm.o
+
+./build/idt/isr.o: ./src/idt/isr.c
+	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/idt/isr.c -o ./build/idt/isr.o
+
 
 # -----------------------------
 # Cleanup

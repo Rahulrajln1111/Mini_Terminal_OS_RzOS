@@ -3,12 +3,17 @@
 #include<stddef.h>
 #include "shell/shell.h"
 #include "memory/memory.h"
+#include "memory/page.h"
+#include "idt/idt.h"
+#include "idt/isr.h"
+#include "utils.h"
 
 extern uint32_t kernel_end;
 uint16_t* video_mem = 0;
 uint16_t terminal_row=0;
 uint16_t terminal_col=0;
-
+#define STACK_SIZE 0x2000
+#define KERNEL_BASE 0x100000
 
 size_t strlen(const char* str){
 	size_t len=0;
@@ -27,8 +32,18 @@ void print(const char * str){
 }
 
 void kernel_main(){
+	idt_init();
+    isr_install();
 	memory_init((uint32_t)&kernel_end, 64 * 1024 * 1024);
-    kheap_init(kernel_end);
+
+	uintptr_t idmap_bytes = (uintptr_t)&kernel_end - KERNEL_BASE + STACK_SIZE;
+    idmap_bytes = (idmap_bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    page_init();
+
+
+	next_heap_va = KHEAP_START; 
+    kheap_init(KHEAP_START);
 
     char* test = (char*)kmalloc(100);
     for (int i = 0; i < 100; i++) test[i] = 'A' + (i % 26);

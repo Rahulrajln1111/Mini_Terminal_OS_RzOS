@@ -3,6 +3,69 @@
 #include "page.h"
 #include <stdint.h>
 
+
+#define MAX_PAGES 16384   // e.g. support 64MB if PAGE_SIZE=4K
+uintptr_t next_heap_va = KHEAP_START;
+uintptr_t kheap_end_va = KHEAP_START + KHEAP_SIZE;
+
+
+static uint8_t page_bitmap[MAX_PAGES];  // 1 = used, 0 = free
+static uintptr_t memory_base = 0;
+static size_t total_pages = 0;
+
+
+
+void memory_init(uintptr_t kernel_end,uint32_t mem_size) {
+    memory_base = (kernel_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1); // align after kernel
+    total_pages = mem_size / PAGE_SIZE;
+    for (size_t i = 0; i < total_pages; i++) {
+        page_bitmap[i] = 0; // all free initially
+    }
+}
+
+void *alloc_page(void) {
+    for (size_t i = 0; i < total_pages; i++) {
+        if (!page_bitmap[i]) {
+            page_bitmap[i] = 1;
+            return (void*)(memory_base + i * PAGE_SIZE);
+        }
+    }
+    return NULL; // OOM
+}
+
+void free_page(void *p) {
+    uintptr_t addr = (uintptr_t)p;
+    size_t index = (addr - memory_base) / PAGE_SIZE;
+    if (index < total_pages) {
+        page_bitmap[index] = 0;
+    }
+}
+
+
+
+size_t mem_total_pages(void) {
+    return total_pages;
+}
+
+size_t mem_free_pages(void) {
+    size_t free = 0;
+    for (size_t i = 0; i < total_pages; i++) {
+        if (!page_bitmap[i]) free++;
+    }
+    return free;
+}
+
+
+
+
+uintptr_t page_to_phys(void *p) {
+    return (uintptr_t)p;
+}
+
+void *phys_to_virt(uintptr_t p) {
+    return (void*)p;
+}
+
 void* memset(void* dest, int value, size_t count) {
     unsigned char* ptr = (unsigned char*)dest;
     while (count-- > 0) {
@@ -26,6 +89,36 @@ typedef struct slab_page {
 // per-class head
 static slab_page_t *slab_heads[SIZE_CLASSES];
 
+
+
+/* allocate a physical page and map it at the next heap virtual address.
+   returns virtual address on success, NULL on failure. */
+void *alloc_page_mapped(void)
+{
+    void *pa = alloc_page();                /* physical page address from bitmap allocator */
+    if (!pa) return NULL;
+
+    /* ensure we don't walk past heap end */
+    if (next_heap_va >= kheap_end_va) {
+        /* optionally: expand heap by growing page tables / updating kheap_end_va */
+        free_page(pa);
+        return NULL;
+    }
+
+    uintptr_t va = next_heap_va;
+    /* map_page(va, pa) returns 0 on success in our page.c */
+    if (map_page(va, (uintptr_t)pa) < 0) {
+        free_page(pa);
+        return NULL;
+    }
+    next_heap_va += PAGE_SIZE;
+    return (void*)va;
+}
+
+
+
+
+
 void kheap_init(uintptr_t kernel_end)
 {
     (void)kernel_end;
@@ -41,7 +134,7 @@ static int class_for_size(size_t s)
 
 static slab_page_t *alloc_slab_for_class(int cls)
 {
-    void *page = alloc_page();
+    void *page =  alloc_page_mapped();
     if (!page) return NULL;
     slab_page_t *sp = (slab_page_t*)page;
     sp->next = NULL;
@@ -62,28 +155,34 @@ static slab_page_t *alloc_slab_for_class(int cls)
     return sp;
 }
 
+
+// in memory.c
 void *kmalloc(size_t size)
 {
     if (size == 0) return NULL;
     // large allocations: allocate whole pages
     if (size > PAGE_SIZE/2) {
-        // round up pages
-        size_t bytes = size;
-        size_t npages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE;
-        // allocate npages pages (simple loop)
-        void *first = alloc_page();
-        if (!first) return NULL;
-        uintptr_t addr = (uintptr_t)first;
-        // allocate additional pages and ignore contiguity for now: return contiguous only if physically contiguous
-        for (size_t i=1;i<npages;i++) {
-            void *p = alloc_page();
-            if (!p) { // if fail, free already allocated pages
-                // free pages allocated so far
-                for (size_t j=0;j<i;j++) free_page((void*)(addr + j*PAGE_SIZE));
+        size_t npages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+        uintptr_t first_va = (uintptr_t)alloc_page_mapped();
+        if (!first_va) return NULL;
+
+        for (size_t i = 1; i < npages; ++i) {
+            void *va = alloc_page_mapped();
+            if (!va) {
+                // failure: free already allocated virtual pages and their backing phys pages
+                size_t freed_pages = i;
+                for (size_t j = 0; j < freed_pages; ++j) {
+                    uintptr_t pva = first_va + j * PAGE_SIZE;
+                    uintptr_t pa = virt_to_phys(pva);
+                    if (pa) {
+                        free_page((void*)pa);
+                    }
+                    unmap_page(pva);
+                }
                 return NULL;
             }
         }
-        return (void*)addr;
+        return (void*)first_va;
     }
 
     int cls = class_for_size(size);
@@ -109,7 +208,6 @@ void *kmalloc(size_t size)
     memset(obj, 0, s->obj_size);
     return obj;
 }
-
 void kfree(void *ptr)
 {
     if (!ptr) return;

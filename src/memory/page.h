@@ -4,15 +4,22 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* Page table/directory entry flags */
+#define PAGE_PRESENT   0x1
+#define PAGE_RW        0x2
+#define PAGE_USER      0x4
 
-void memory_init(uint32_t mem_size, uintptr_t kernel_end);
-void *alloc_page(void);
-void free_page(void *p);
-uintptr_t page_to_phys(void *p);   // if you use phys==virt, returns same
-void *phys_to_virt(uintptr_t p);   // identity for now
+/* Backwards compatibility/aliases for the existing code */
+#define PDE_PRESENT    0x1
+#define PDE_RW         0x2
+#define PTE_PRESENT    0x1
+#define PTE_RW         0x2
 
-// debugging
-size_t mem_total_pages(void);
-size_t mem_free_pages(void);
+/* Functions */
+void page_init(void);
+int  map_page(uintptr_t va, uintptr_t pa);      // simple map RW, kernel-only
+int  unmap_page(uintptr_t va);
+uintptr_t virt_to_phys(uintptr_t va);
+
 
 #endif
