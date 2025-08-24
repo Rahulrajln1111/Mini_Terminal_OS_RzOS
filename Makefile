@@ -9,9 +9,12 @@ FILES = \
     ./build/idt/idt.o \
     ./build/idt/isr.asm.o \
     ./build/idt/isr.o  \
-    ./build/utils.o
+    ./build/utils.o \
+    ./build/proc/proc.o\
 
-INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt
+
+
+INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt -I./src/proc
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops \
         -fstrength-reduce -fomit-frame-pointer -finline-functions \
         -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter \
@@ -51,6 +54,8 @@ all: ./bin/kernel.bin ./bin/boot.bin
 
 ./build/memory/page.o: ./src/memory/page.c
 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/memory/page.c -o ./build/memory/page.o
+./build/proc/proc.o: ./src/proc/proc.c
+	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/proc/proc.c -o ./build/proc/proc.o
 
 # -----------------------------
 # Bootloader build

@@ -11,7 +11,7 @@
 
 extern uintptr_t next_heap_va;
 extern uintptr_t kheap_end_va;
-
+extern uintptr_t pd_phys_global;
 
 /* Basic memory utils (implemented in memutils.c) */
 void *memset(void *dest, int value, size_t count);
