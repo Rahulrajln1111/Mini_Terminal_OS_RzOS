@@ -180,6 +180,11 @@ void page_init(void)
         }
     }
 
+    // Identity map first 4 MB
+map_page(0x00000000, 0x00000000);
+
+// Map kernel: virtual 0xC0100000 -> physical 0x00100000
+map_page(0xC0100000, 0x00100000);
 
 
 
