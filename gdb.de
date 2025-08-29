@@ -1,5 +1,5 @@
 set architecture i386
 add-symbol-file ./build/kernelfull.o 0x100000
 target remote :1234
-b paging_enable_and_jump
+b kernel_main
 c

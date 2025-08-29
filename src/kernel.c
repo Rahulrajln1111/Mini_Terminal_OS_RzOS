@@ -13,14 +13,6 @@ extern uint32_t kernel_end;
 uint16_t* video_mem = 0;
 uint16_t terminal_row=0;
 uint16_t terminal_col=0;
-#define STACK_SIZE 0x2000
-#define KERNEL_BASE 0x100000
-
-// Define separate virtual addresses for code and stack
-#define USER_CODE_VIRTUAL  0x00010000 // A lower virtual address for code
-#define USER_STACK_VIRTUAL 0x40000000 // A higher virtual address for the stack
-
-
 
 
 size_t strlen(const char* str){
@@ -40,26 +32,6 @@ void print(const char * str){
 }
 
 
-void test_heap_usability(void) {
-    kputs("Testing heap usability...\n");
-    // 1. Allocate from the heap
-    char *test_ptr = (char*)kmalloc(100);
-    if (!test_ptr) {
-        kputs("FAILURE: kmalloc failed to return a pointer!\n");
-        return;
-    }
-    // 2. Write a unique pattern to the memory
-    test_ptr[0] = 'A';
-    test_ptr[99] = 'Z';
-    // 3. Verify the data
-    if (test_ptr[0] == 'A' && test_ptr[99] == 'Z') {
-        kputs("SUCCESS: Paging and heap are functional!\n");
-    } else {
-        kputs("FAILURE: Paging did not correctly map memory for read/write.\n");
-    }
-    kfree(test_ptr);
-}
-
 
 void user_program_A(void) {
     kputs("Hello from Process A!\n");
@@ -71,82 +43,41 @@ void user_program_B(void) {
     for (;;) {} // Simple loop to halt this process
 }
 
-
-void paging_enable_and_jump() {
-    idt_init();
-    isr_install();
-    memory_init((uint32_t)&kernel_end, 64 * 1024 * 1024);
-    uintptr_t idmap_bytes = (uintptr_t)&kernel_end - KERNEL_BASE + STACK_SIZE;
-    idmap_bytes = (idmap_bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-    next_heap_va = KHEAP_START;
-    kheap_init(KHEAP_START);
-    page_init();
-
-    // Function pointer to higher-half kernel_main
-    void (*higher_half_main)(void) = (void*)0xC0100000;
-    higher_half_main();
+void ensure_low_memory_identity_mapped(struct paging_chunk_4gb *chunk) {
+    // map virtual 0x0..0x400000 to physical 0x0..0x400000
+    // PAGING_PAGE_SIZE = 4096
+    // flags: present + writable + supervisor (no USER)
+    int flags = PAGE_PRESENT | PAGE_RW; // don't need PAGE_USER for kernel pages
+    paging_map_to(chunk,
+                  (void*)0x00000000,            // virt start
+                  (void*)0x00000000,            // phys start
+                  (void*)0x00400000,            // phys_end (exclusive)
+                  flags);
 }
 
+static struct paging_chunk_4gb * kernel_chunk = 0;
 
 void kernel_main(){
-    test_heap_usability();
-    char* test = (char*)kmalloc(100);
-    for (int i = 0; i < 100; i++) test[i] = 'A' + (i % 26);
-    kfree(test);
+    kheap_init();
+    idt_init();
+    kernel_chunk = paging_chunk(PAGE_USER|PAGE_RW|PAGE_PRESENT);
+    
+    char *ptr = kzalloc(4096);
+
+    //paging_set(get_dir_chunk4gb(kernel_chunk),(void*)0x1000,(uint32_t)ptr|PAGE_PRESENT|PAGE_RW|PAGE_USER);
+    paging_switch(get_dir_chunk4gb(kernel_chunk));
+    enable_paging();
+
+    for (int i = 0; i < 100; i++) ptr[i] = 'A' + (i % 26);
+    char *ptr2 = (char*)0x1010;
+    kputs(ptr2);
+    kputs(ptr);
 
 print("Hello!\nRazz_--");
 print_serial("\nMy name is Razz\n");
 
 terminal_initialize();
 
-
-    // 1. Create the first process
-    pcb_t* proc_a = create_process();
-    if (!proc_a) {
-        kputs("Failed to create user process A!\n");
-        return;
-    }
-
-    // 2. Allocate a physical page for the user stack
-    uintptr_t stack_a_phys = (uintptr_t)alloc_page();
-    if (!stack_a_phys) {
-        kputs("Failed to allocate user stack page for A!\n");
-        return;
-    }
-    // Map the physical stack page into the process's virtual space
-    // at USER_STACK_VIRTUAL (0x40000000).
-    // Use PAGE_RW | PAGE_USER flags to allow user-mode access.
-    map_page_to(proc_a->cr3, USER_STACK_VIRTUAL, stack_a_phys, PAGE_RW | PAGE_USER);
-
-    // Set ESP to the very top of the stack page.
-    proc_a->esp = USER_STACK_VIRTUAL + PAGE_SIZE - 4;
-
-    // --- CRITICAL CHANGES FOR CODE MAPPING ---
-    // 3. Get the physical address of the kernel function user_program_A.
-    // This requires a working virt_to_phys function.
-    uintptr_t user_program_A_phys = virt_to_phys((uintptr_t)user_program_A);
-    if (user_program_A_phys == 0) {
-        kputs("Failed to get physical address of user_program_A!\n");
-        return;
-    }
-
-    // 4. Map this physical code page into the user process's virtual space
-    // at a user-space virtual address (USER_CODE_VIRTUAL, e.g., 0x00010000).
-    // Use PAGE_PRESENT | PAGE_RW | PAGE_USER flags.
-    map_page_to(proc_a->cr3, USER_CODE_VIRTUAL, user_program_A_phys, PAGE_PRESENT | PAGE_RW | PAGE_USER);
-
-    // 5. Set the instruction pointer (EIP) to the user-space virtual address
-    // where user_program_A is now mapped.
-    proc_a->eip = USER_CODE_VIRTUAL;
-
-    // --- Debugging output before switch ---
-    kputs("Switching to Process A...\n");
-    kputs("  Process A CR3: "); kputhex(proc_a->cr3); kputs("\n");
-    kputs("  Process A EIP: "); kputhex(proc_a->eip); kputs("\n");
-    kputs("  Process A ESP: "); kputhex(proc_a->esp); kputs("\n");
-
-    // 6. Perform the context switch
-    switch_to_process(proc_a);
 }
 
 

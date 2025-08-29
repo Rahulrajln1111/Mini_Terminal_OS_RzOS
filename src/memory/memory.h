@@ -1,37 +1,44 @@
-#ifndef MEMORY_H
-#define MEMORY_H
-
+#ifndef HEAP_H
+#define HEAP_H
+#include "config.h"
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+#define HEAP_BLOCK_TABLE_ENTRY_TAKEN 0x01
+#define HEAP_BLOCK_TABLE_ENTRY_FREE 0x00
 
-/* kheap constants */
-#define KHEAP_START 0xC0200000
-#define KHEAP_END   0xC0300000   
-#define KHEAP_SIZE  (16 * 1024 * 1024u) /* e.g. 16 MB initial heap */
-
-extern uintptr_t next_heap_va;
-extern uintptr_t kheap_end_va;
-extern uintptr_t pd_phys_global;
-
-/* Basic memory utils (implemented in memutils.c) */
-void *memset(void *dest, int value, size_t count);
-void *memcpy(void *dest, const void *src, size_t count);
-
-/* Page allocator API (page.c) */
-#define PAGE_SIZE 4096U
-void *alloc_page_mapped(void);
-void memory_init(uint32_t mem_size, uintptr_t kernel_end);
-void kheap_init(uintptr_t kernel_end);
-void *kmalloc(size_t size);
-void kfree(void *ptr);
-void memory_init(uint32_t mem_size, uintptr_t kernel_end);
-void *alloc_page(void);
-void free_page(void *p);
-uintptr_t page_to_phys(void *p);
-void *phys_to_virt(uintptr_t p);
-size_t mem_total_pages(void);
-size_t mem_free_pages(void);
+#define HEAP_BLOCK_HAS_NEXT 0b10000000
+#define HEAP_BLOCK_IS_FIRST  0b01000000
 
 
+typedef unsigned char HEAP_BLOCK_TABLE_ENTRY;
 
-#endif /* MEMORY_H */
+struct heap_table
+{
+    HEAP_BLOCK_TABLE_ENTRY* entries;
+    size_t total;
+};
+
+
+struct heap
+{
+    struct heap_table* table;
+
+    // Start address of the heap data pool
+    void* saddr;
+};
+
+int heap_create(struct heap* heap, void* ptr, void* end, struct heap_table* table);
+void* heap_malloc(struct heap* heap, size_t size);
+void heap_free(struct heap* heap, void* ptr);
+
+
+void kheap_init();
+void* kmalloc(size_t size);
+void* kzalloc(size_t size);
+void kfree(void* ptr);
+
+void* memset(void* ptr, int c, size_t size);
+int memcmp(void* s1, void* s2, int count);
+void* memcpy(void* dest, void* src, int len);
+#endif

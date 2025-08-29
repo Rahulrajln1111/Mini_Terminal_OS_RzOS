@@ -1,11 +1,23 @@
-.global paging_trampoline
+[BITS 32]
 
-.extern kernel_main
+section .asm
 
-paging_trampoline:
-    mov $0xC01FFE00, %esp
+global paging_load_dir
+global enable_paging
+paging_load_dir:
+    push ebp
+    mov ebp,esp
+    mov eax,[ebp+8]
+    mov cr3,eax
+    pop ebp
+    ret
 
-    ; # Jump to higher-half kernel_main
-    ; # VA = KERNEL_HIGHBASE + (kernel_main - KERNEL_BASE)
-    mov $0xC0100000, %eax  ; # replace 0xC0100000 with actual calculation
-    jmp *%eax
+enable_paging:
+    push ebp
+    mov ebp,esp
+    mov eax,cr0
+    or eax,0x80000000
+    mov cr0,eax
+    pop ebp
+    ret
+
