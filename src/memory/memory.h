@@ -1,5 +1,5 @@
-#ifndef HEAP_H
-#define HEAP_H
+#ifndef MEMORY_H
+#define MEMORY_H
 #include "config.h"
 #include <stdint.h>
 #include <stddef.h>

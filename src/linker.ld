@@ -2,33 +2,32 @@ ENTRY(_start)
 OUTPUT_FORMAT(binary)
 SECTIONS
 {
-	. = 1M;
-	.text : ALIGN(4096)
-	{
-	   *(.text)
-	}
+    . = 0x100000;
+    .text : ALIGN(4096)
+    {
+        *(.text)
+    }
 
-	.rodata : ALIGN(4096)
-	{
-	   *(.rodata)
-	}
+    .asm : ALIGN(4096)
+    {
+        *(.asm)
+    }
 
-	.data : ALIGN(4096)
-	{
-	  *(.data)
-	}
+    .rodata : ALIGN(4096)
+    {
+        *(.rodata)
+    }
 
-	.bss : ALIGN(4096)
-	{   
-	    *(COMMON)
-	    *(.bss)
-	}
+    .data : ALIGN(4096)
+    {
+        *(.data)
+    }
 
-	.asm : ALIGN(4096)
-	{
-		*(.asm)
-	}
-	kernel_end = .;
-
-
+    .bss : ALIGN(4096)
+    {
+        *(COMMON)
+        *(.bss)
+    }
+    . = ALIGN(4096);
+    kernel_end = .;
 }

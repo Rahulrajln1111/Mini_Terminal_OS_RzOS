@@ -11,5 +11,5 @@
 #define EUNIMP 7
 #define EISTKN 8
 #define EINFORMAT 9
-
+#define ENOFOUND 6 
 #endif

@@ -20,7 +20,42 @@ void kputs(const char* s) {
         serial_write(s[i]);
     }
 }
-
+static int abs(int value) {
+    if (value < 0) {
+        return -value;
+    }
+    return value;
+}
+void itoa(int value, char* str, int base) {
+    // char* rc;
+    char* ptr;
+    char* low;
+    // Check for supported base
+    if ( base < 2 || base > 36 ) {
+        *str = '\0';
+        return;
+    }
+    ptr = str;
+    // Set '-' for negative decimals
+    if ( value < 0 && base == 10 ) {
+        *ptr++ = '-';
+    }
+    // Remember where the number part starts
+    low = ptr;
+    // The actual conversion
+    do {
+        *ptr++ = "0123456789abcdef"[abs(value % base)];
+        value /= base;
+    } while ( value );
+    // Terminating the string
+    *ptr-- = '\0';
+    // Invert the number
+    while ( low < ptr ) {
+        char tmp = *low;
+        *low++ = *ptr;
+        *ptr-- = tmp;
+    }
+}
 void kputhex(uint32_t x) {
     char b[11];
     static const char hex[] = "0123456789ABCDEF";

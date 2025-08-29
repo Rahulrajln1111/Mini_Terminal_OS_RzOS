@@ -19,7 +19,7 @@ uintptr_t virt_to_phys(uintptr_t va);
 int map_page_to(uintptr_t pd_phys, uintptr_t va, uintptr_t pa, uint32_t flags);
 void* map_page_to_virt(uintptr_t pa) ;
 
-
+void paging_load_dir(uint32_t *dir);
 
 //Struct paging
 void paging_switch(uint32_t* directory);

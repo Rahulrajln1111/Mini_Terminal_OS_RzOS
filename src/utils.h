@@ -6,4 +6,5 @@
 void int_to_hex(uint32_t n, char *out);
 void kputhex(uint32_t x);
 void kputs(const char* s);
+void itoa(int value, char* str, int base);
 #endif

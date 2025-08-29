@@ -2,7 +2,7 @@
 
 global _start
 extern kernel_main
-
+extern kernel_end
 CODE_SEG equ 0x08
 DATA_SEG equ 0x10
 

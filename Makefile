@@ -1,25 +1,25 @@
 FILES = \
-    ./build/kernel.asm.o \
-    ./build/kernel.o \
-    ./build/io/io.asm.o \
-    ./build/shell.o \
-    ./build/memory/memory.o \
-    ./build/memory/page.o \
-    ./build/memory/page.asm.o\
-    ./build/idt/idt.asm.o \
-    ./build/idt/idt.o \
-    ./build/idt/isr.asm.o \
-    ./build/idt/isr.o  \
-    ./build/utils.o \
+	./build/kernel.asm.o \
+	./build/kernel.o \
+	./build/io/io.asm.o \
+	./build/shell.o \
+	./build/memory/memory.o \
+	./build/memory/page.o \
+	./build/memory/page.asm.o\
+	./build/idt/idt.asm.o \
+	./build/idt/idt.o \
+	./build/idt/isr.asm.o \
+	./build/idt/isr.o  \
+	./build/utils.o \
 #./build/proc/proc.o\
 
 
 
 INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt #-I./src/proc
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops \
-        -fstrength-reduce -fomit-frame-pointer -finline-functions \
-        -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter \
-        -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+	    -fstrength-reduce -fomit-frame-pointer -finline-functions \
+	    -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter \
+	    -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
 all: ./bin/kernel.bin ./bin/boot.bin 
 	rm -rf ./bin/os.bin
@@ -32,7 +32,7 @@ all: ./bin/kernel.bin ./bin/boot.bin
 # -----------------------------
 ./bin/kernel.bin: $(FILES)
 	~/opt/cross/bin/i686-elf-ld -g -relocatable $(FILES) -o ./build/kernelfull.o
-	~/opt/cross/bin/i686-elf-gcc -T./src/linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o 
+	~/opt/cross/bin/i686-elf-gcc -T./src/linker.ld -o ./bin/kernel.bin -ffreestanding -O0 -nostdlib ./build/kernelfull.o
 
 ./build/kernel.asm.o: ./src/kernel.asm
 	nasm -f elf -g ./src/kernel.asm -o ./build/kernel.asm.o
@@ -50,6 +50,9 @@ all: ./bin/kernel.bin ./bin/boot.bin
 ./build/shell.o: ./src/shell/shell.c
 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/shell/shell.c -o ./build/shell.o 
 
+
+
+#Memory management
 ./build/memory/memory.o: ./src/memory/memory.c
 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/memory/memory.c -o ./build/memory/memory.o
 
@@ -59,7 +62,6 @@ all: ./bin/kernel.bin ./bin/boot.bin
 # 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/proc/proc.c -o ./build/proc/proc.o
 ./build/memory/page.asm.o: ./src/memory/page.S
 	nasm -f elf -g ./src/memory/page.S -o ./build/memory/page.asm.o
-
 
 # -----------------------------
 # Bootloader build
