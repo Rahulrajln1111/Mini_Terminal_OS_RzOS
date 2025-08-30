@@ -69,7 +69,9 @@ void kernel_main(){
 
     kputs("Paging enabled and working!\n");
     char *ptr2 = (char*)kzalloc(50);
-    for(int i=0;i<40;i++)ptr2[i]=i+'A';
+    char *ptr3 = (char*)kzalloc(10);
+    for(int i=0;i<20;i++)ptr2[i]=i+'A';
+    for(int i=0;i<20;i++)ptr3[i]=i+'a';
 
-    asm volatile("sti"); // Re-enable interrupts
+    terminal_initialize();
 }

@@ -15,8 +15,8 @@ extern void* memset(void* ptr, int c, size_t size);
 // A simple page frame allocator stub (returns a 4KB aligned physical address)
 void* alloc_page(void) {
     void* page = kmalloc(PAGE_SIZE); 
-    if (page) {
-        memset(page, 0, PAGE_SIZE);
+    if (!page) {
+        return NULL;
     }
     return page;
 }
@@ -134,12 +134,7 @@ int map_page_to(uintptr_t pd_phys, uintptr_t va, uintptr_t pa, uint32_t flags) {
     return RZOS_ALL_OK;
 }
 
-// Maps a range of virtual addresses to a range of physical addresses.
-// directory_chunk: The paging_chunk struct.
-// virt_start: Starting virtual address.
-// phys_start: Starting physical address.
-// phys_end: Ending physical address (exclusive).
-// flags: Page flags.
+
 int paging_map_to(struct paging_chunk_4gb *directory_chunk, void *virt_start, void *phys_start, void *phys_end, int flags) {
     if(phys_end!=(void*)0x300000){
     if (directory_chunk == NULL || virt_start == NULL || phys_start == NULL || phys_end == NULL) {
@@ -224,7 +219,6 @@ int paging_set(uint32_t* directory_phys_addr, void* virt_add, uint32_t val) {
     return RZOS_ALL_OK;
 }
 
-// Checks if an address is page-aligned
 bool is_page_aligned(void *addr) {
     return ((uintptr_t)addr % PAGE_SIZE) == 0;
 }
