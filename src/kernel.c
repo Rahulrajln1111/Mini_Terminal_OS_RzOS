@@ -10,7 +10,7 @@
 #include "proc/proc.h"
 #include "config.h" 
 #include "status.h"
-
+#include "ssd/ssd.h"
 #define kernel_end  0x10a000
 #define total_ram_kb 1024*500
 #define KERNEL_DIRECT_MAP_OFFSET 0xC0000000 
@@ -71,7 +71,8 @@ void kernel_main(){
     char *ptr2 = (char*)kzalloc(50);
     char *ptr3 = (char*)kzalloc(10);
     for(int i=0;i<20;i++)ptr2[i]=i+'A';
-    for(int i=0;i<20;i++)ptr3[i]=i+'a';
-
+    read_sector(0,1,ptr3);
+    kputs("Reading from disk:");
+    kputs(ptr3);
     terminal_initialize();
 }

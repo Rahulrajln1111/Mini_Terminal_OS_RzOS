@@ -11,11 +11,12 @@ FILES = \
 	./build/idt/isr.asm.o \
 	./build/idt/isr.o  \
 	./build/utils.o \
+	./build/ssd/ssd.o \
 #./build/proc/proc.o\
 
 
 
-INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt #-I./src/proc
+INCLUDES = -I./src -I./src/io -I./src/shell -I./src/memory -I./src/idt -I./src/ssd
 FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops \
 	    -fstrength-reduce -fomit-frame-pointer -finline-functions \
 	    -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter \
@@ -62,6 +63,11 @@ all: ./bin/kernel.bin ./bin/boot.bin
 # 	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/proc/proc.c -o ./build/proc/proc.o
 ./build/memory/page.asm.o: ./src/memory/page.S
 	nasm -f elf -g ./src/memory/page.S -o ./build/memory/page.asm.o
+
+
+
+./build/ssd/ssd.o: ./src/ssd/ssd.c
+	~/opt/cross/bin/i686-elf-gcc $(INCLUDES) $(FLAGS) -std=gnu99 -c ./src/ssd/ssd.c -o ./build/ssd/ssd.o
 
 # -----------------------------
 # Bootloader build
