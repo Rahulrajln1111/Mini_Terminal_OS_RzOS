@@ -220,15 +220,18 @@ void heap_free(struct heap* heap, void* ptr)
 
 struct heap kernel_heap;
 struct heap_table kernel_heap_table;
-
+extern bool g_is_paging_enabled;
+uintptr_t KERNEL_HEAP_BASE = RZOS_HEAP_ADDRESS;
 void kheap_init()
 {
     int total_table_entries = RZOS_HEAP_SIZE_BYTES / RZOS_HEAP_BLOCK_SIZE;
     kernel_heap_table.entries = (HEAP_BLOCK_TABLE_ENTRY*)(RZOS_HEAP_TABLE_ADDRESS);
     kernel_heap_table.total = total_table_entries;
-
+    if(g_is_paging_enabled){
+        KERNEL_HEAP_BASE = 0xC0000000;
+    }
     void* end = (void*)(RZOS_HEAP_ADDRESS + RZOS_HEAP_SIZE_BYTES);
-    int res = heap_create(&kernel_heap, (void*)(RZOS_HEAP_ADDRESS), end, &kernel_heap_table);
+    int res = heap_create(&kernel_heap, (void*)(KERNEL_HEAP_BASE), end, &kernel_heap_table);
     if (res < 0)
     {
         print("Failed to create heap\n");

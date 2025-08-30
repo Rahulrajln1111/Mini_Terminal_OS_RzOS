@@ -12,15 +12,10 @@
 #include "status.h"
 
 #define kernel_end  0x10a000
-// Define the kernel's virtual base address (e.g., 3GB)
-// #define KERNEL_VIRTUAL_ADDRESS 0xC0000000
-// CRITICAL FIX: This MUST match the base address in linker.ld (0x400000)
-#define KERNEL_PHYSICAL_ADDRESS 0x1000000
-#define total_ram_kb 1024*128
-#define KERNEL_VIRTUAL_ADDRESS (KERNEL_PHYSICAL_ADDRESS + KERNEL_DIRECT_MAP_OFFSET) // This evaluates to 0xC00FE000
+#define total_ram_kb 1024*500
 #define KERNEL_DIRECT_MAP_OFFSET 0xC0000000 
 uint32_t total_physical_bytes = total_ram_kb * 1024;
-
+bool g_is_paging_enabled = false;
 uint16_t* video_mem = 0;
 uint16_t terminal_row=0;
 uint16_t terminal_col=0;
@@ -46,15 +41,8 @@ static struct paging_chunk_4gb * kernel_chunk = 0;
 void kernel_main(){
     kheap_init();
     idt_init();
-    //pmm_init(total_ram_kb);
-
-    //uint32_t* kernel_pd_phys = (uint32_t*)pmm_alloc_page();
-    // if (kernel_pd_phys == NULL) {
-    //     print_serial("Failed to create kernel page directory!\n");
-    //     for(;;); 
-    // }
-    // memset(kernel_pd_phys, 0, PAGE_SIZE);
-
+    char *ptr = kzalloc(40);
+    ptr[0] = 'E';
     kernel_chunk = paging_chunk(PAGE_USER | PAGE_RW | PAGE_PRESENT);
     if (kernel_chunk == NULL) {
         print_serial("Failed to create kernel paging chunk!\n");
@@ -65,7 +53,7 @@ void kernel_main(){
         print_serial("Failed to identity map first 4MB!\n");
         for(;;);
     }
-    if (paging_map_to(kernel_chunk,(void*)0x50000000, (void*)0x300000, (void*)total_physical_bytes, PAGE_PRESENT | PAGE_RW) != RZOS_ALL_OK) {
+    if (paging_map_to(kernel_chunk,(void*)0xC0000000, (void*)0x300000, (void*)total_physical_bytes, PAGE_PRESENT | PAGE_RW) != RZOS_ALL_OK) {
         print_serial("Failed to map direct physical memory to higher half with offset!\n");
         for(;;);
     }
@@ -76,9 +64,11 @@ void kernel_main(){
 
     paging_switch(get_dir_chunk4gb(kernel_chunk));
     enable_paging();
+    g_is_paging_enabled = true;
+    kheap_init();
 
     kputs("Paging enabled and working!\n");
-    char *ptr2 = (char*)0x50000000;
+    char *ptr2 = (char*)kzalloc(50);
     for(int i=0;i<40;i++)ptr2[i]=i+'A';
 
     asm volatile("sti"); // Re-enable interrupts
