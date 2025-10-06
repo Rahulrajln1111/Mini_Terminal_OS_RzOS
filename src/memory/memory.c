@@ -30,7 +30,7 @@ void *alloc_page(void) {
             return (void*)(memory_base + i * PAGE_SIZE);
         }
     }
-    return NULL;  
+    return NULL; // OOM
 }
 
 void free_page(void *p) {

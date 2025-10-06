@@ -20,9 +20,6 @@ uint16_t terminal_col=0;
 #define USER_CODE_VIRTUAL  0x00010000 // A lower virtual address for code
 #define USER_STACK_VIRTUAL 0x40000000 // A higher virtual address for the stack
 
-
-
-
 size_t strlen(const char* str){
     size_t len=0;
     while(str[len]){
@@ -72,23 +69,16 @@ void user_program_B(void) {
 }
 
 
-void paging_enable_and_jump() {
+void kernel_main(){
     idt_init();
     isr_install();
     memory_init((uint32_t)&kernel_end, 64 * 1024 * 1024);
+
     uintptr_t idmap_bytes = (uintptr_t)&kernel_end - KERNEL_BASE + STACK_SIZE;
     idmap_bytes = (idmap_bytes + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
     next_heap_va = KHEAP_START;
     kheap_init(KHEAP_START);
     page_init();
-
-    // Function pointer to higher-half kernel_main
-    void (*higher_half_main)(void) = (void*)0xC0100000;
-    higher_half_main();
-}
-
-
-void kernel_main(){
     test_heap_usability();
     char* test = (char*)kmalloc(100);
     for (int i = 0; i < 100; i++) test[i] = 'A' + (i % 26);
@@ -148,5 +138,3 @@ terminal_initialize();
     // 6. Perform the context switch
     switch_to_process(proc_a);
 }
-
-
