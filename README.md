@@ -16,3 +16,4 @@ make all
 ```qemu
 qemu-system-i386 -drive format=raw,file=./bin/os.bin -nographic
 ```
+>> I just Started developing this OS
