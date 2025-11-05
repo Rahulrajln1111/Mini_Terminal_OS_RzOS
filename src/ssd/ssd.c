@@ -20,7 +20,7 @@ int read_sector(int lba, int total, void *buf) {
         uint8_t status;
         do {
             status = insb(0x1F7);
-        } while (status & 0x80);   → still// BSY=1  busy
+        } while (status & 0x80); //  → still// BSY=1  busy
 
         while (!(status & 0x08)) { // DRQ=0 → not ready for data
             status = insb(0x1F7);
