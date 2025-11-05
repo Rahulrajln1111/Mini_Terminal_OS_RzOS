@@ -3,7 +3,6 @@
 #include "status.h"
 #include "memory/memory.h"
 #include <stdbool.h>
-#include "status.h"
 void* memset(void* ptr, int c, size_t size)
 {
     char* c_ptr = (char*) ptr;
